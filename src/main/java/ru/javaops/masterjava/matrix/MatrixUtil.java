@@ -15,6 +15,37 @@ public class MatrixUtil {
         final int matrixSize = matrixA.length;
         final int[][] matrixC = new int[matrixSize][matrixSize];
 
+        final int rowCount = matrixA.length;             // Число строк результирующей матрицы.
+        final int colCount = matrixB[0].length;         // Число столбцов результирующей матрицы.
+        final int threadCount = Runtime.getRuntime().availableProcessors(); //Число потоков по количеству процессоров.
+
+
+        final int cellsForThread = (rowCount * colCount) / threadCount;  // Число вычисляемых ячеек на поток.
+        int firstIndex = 0;  // Индекс первой вычисляемой ячейки.
+        final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];  // Массив потоков.
+
+        // Создание и запуск потоков.
+        for (int threadIndex = threadCount - 1; threadIndex >= 0; --threadIndex) {
+            int lastIndex = firstIndex + cellsForThread;  // Индекс последней вычисляемой ячейки.
+            if (threadIndex == 0) {
+                /* Один из потоков должен будет вычислить не только свой блок ячеек,
+                   но и остаток, если число ячеек не делится нацело на число потоков. */
+                lastIndex = rowCount * colCount;
+            }
+            multiplierThreads[threadIndex] = new MultiplierThread(matrixA, matrixB, matrixC, firstIndex, lastIndex);
+            multiplierThreads[threadIndex].start();
+            firstIndex = lastIndex;
+        }
+
+        // Ожидание завершения потоков.
+        try {
+            for (final MultiplierThread multiplierThread : multiplierThreads)
+                multiplierThread.join();
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         return matrixC;
     }
 
@@ -32,6 +63,7 @@ public class MatrixUtil {
                 matrixC[i][j] = sum;
             }
         }
+
         return matrixC;
     }
 
